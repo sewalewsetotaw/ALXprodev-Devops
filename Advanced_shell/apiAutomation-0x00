@@ -1,2 +1,14 @@
-initial
-https://pokeapi.co/api/v2/pokemon/
+#!/bin/bash
+
+API_URL="https://pokeapi.co/api/v2/pokemon/pikachu"
+
+# Make the API request
+RESPONSE=$(curl -s -w "%{http_code}" -o data.json "$API_URL")
+
+# Check if the request was successful (HTTP status code 200)
+if [ "$RESPONSE" -ne 200 ]; then
+    echo "Request failed with status code $RESPONSE" >> errors.txt
+    exit 1
+else
+    echo "API response saved to data.json"
+fi
