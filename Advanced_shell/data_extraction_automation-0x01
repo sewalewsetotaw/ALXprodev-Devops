@@ -7,9 +7,9 @@ weight=$(jq -r '.weight' data.json)
 height=$(jq -r '.height' data.json)
 
 # Convert to kg and meters
-weight_kg=$(awk "BEGIN { printf \"%.0f\", $weight / 10 }")
-height_m=$(awk "BEGIN { printf \"%.1f\", $height / 10 }")
+formatted_weight=$(awk "BEGIN { printf \"%.0f\", $weight / 10 }")
+formatted_height=$(awk "BEGIN { printf \"%.1f\", $height / 10 }")
 
 # Print the result
-echo "$name is of type $type, weighs ${weight_kg}kg, and is ${height_m}m tall."
+echo "$name is of type $type, weighs ${formatted_weight}kg, and is ${formatted_height}m tall."
 
