@@ -1,31 +1,30 @@
 #!/bin/bash
 
-# Directory to store fetched JSON files
+# Directory to save data
 output_dir="pokemon_data"
 mkdir -p "$output_dir"
 
 # List of Pokémon
 pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
-# Log file for failed requests
+# Log file
 log_file="failed_parallel.log"
-> "$log_file"  # Clear log file
+> "$log_file"
 
-# Max retries per Pokémon
+# Max retries and timeout
 max_retries=3
+timeout=10  # seconds
 
-# Function to fetch Pokémon data with retries
+# Function to fetch with retries
 fetch_pokemon() {
     local name=$1
     local attempt=1
     local success=false
 
-    echo "Fetching $name..."
-
     while [ $attempt -le $max_retries ]; do
         curl -s --fail "https://pokeapi.co/api/v2/pokemon/$name" -o "$output_dir/$name.json"
         if [ $? -eq 0 ]; then
-            echo "✅ $name saved to $output_dir/$name.json"
+            echo "✅ $name saved."
             success=true
             break
         else
@@ -37,27 +36,44 @@ fetch_pokemon() {
 
     if [ "$success" = false ]; then
         echo "$name" >> "$log_file"
-        echo "❌ Failed to fetch $name after $max_retries retries"
     fi
 }
 
-# Export the function for use in subshells (optional for some shells)
-export -f fetch_pokemon
+# Track PIDs
+pids=()
+names=()
 
-# Loop over Pokémon and fetch in background
+# Start fetches in background
 for name in "${pokemon_list[@]}"; do
     fetch_pokemon "$name" &
+    pid=$!
+    pids+=($pid)
+    names+=($name)
 done
 
-# Wait for all background jobs to finish
+# Monitor with timeout and kill if needed
+for i in "${!pids[@]}"; do
+    pid=${pids[$i]}
+    name=${names[$i]}
+
+    (
+        sleep $timeout
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "⚠️ Timeout! Killing $name process (PID $pid)"
+            kill "$pid"
+            echo "$name" >> "$log_file"
+        fi
+    ) &
+done
+
+# Wait for all background processes
 wait
 
+# Report
 echo ""
-echo "✅ All fetch processes completed."
-
-# Show failed ones if any
+echo "✅ All background fetches completed."
 if [ -s "$log_file" ]; then
-    echo "⚠️ Some fetches failed. See $log_file for details."
+    echo "⚠️ Failures logged in $log_file"
 else
     echo "🎉 All Pokémon data fetched successfully."
 fi
